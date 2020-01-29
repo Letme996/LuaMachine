@@ -1,4 +1,4 @@
-// Copyright 2019 - Roberto De Ioris
+// Copyright 2018-2020 - Roberto De Ioris
 
 #pragma once
 
@@ -7,8 +7,8 @@
 #include "ThirdParty/lua/lua.hpp"
 #include "LuaValue.h"
 #include "LuaCode.h"
+#include "LuaBlueprintPackage.h"
 #include "Runtime/Core/Public/Containers/Queue.h"
-#include "Runtime/Engine/Classes/Kismet/BlueprintFunctionLibrary.h"
 #include "LuaState.generated.h"
 
 LUAMACHINE_API DECLARE_LOG_CATEGORY_EXTERN(LogLuaMachine, Log, All);
@@ -16,6 +16,7 @@ LUAMACHINE_API DECLARE_LOG_CATEGORY_EXTERN(LogLuaMachine, Log, All);
 /**
  *
  */
+
 
 struct FLuaUserData
 {
@@ -37,6 +38,15 @@ struct FLuaUserData
 		Context = InObject;
 		Function = InFunction;
 	}
+};
+
+UENUM(BlueprintType)
+enum ELuaThreadStatus
+{
+	Invalid,
+	Ok,
+	Suspended,
+	Error,
 };
 
 USTRUCT()
@@ -95,6 +105,13 @@ struct FLuaDebug
 };
 
 
+struct FLuaSmartReference : public TSharedFromThis<FLuaSmartReference>
+{
+	ULuaState* LuaState;
+	FLuaValue Value;
+};
+
+
 UCLASS(Abstract, Blueprintable, HideDropdown)
 class LUAMACHINE_API ULuaState : public UObject
 {
@@ -115,11 +132,11 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Lua")
 	TMap<FString, FLuaValue> Table;
 
-	UPROPERTY(EditAnywhere, Category = "Lua")
-	TMap<FString, ULuaCode*> RequireTable;
+	UPROPERTY(EditAnywhere, Category = "Lua", meta = (DisplayName = "Lua Blueprint Packages Table"))
+	TMap<FString, TSubclassOf<ULuaBlueprintPackage>> LuaBlueprintPackagesTable;
 
 	UPROPERTY(EditAnywhere, Category = "Lua")
-	TMap<FString, TSubclassOf<UBlueprintFunctionLibrary>> RequireBlueprintFunctionLibraryTable;
+	TMap<FString, ULuaCode*> RequireTable;
 
 	UPROPERTY(EditAnywhere, Category = "Lua")
 	bool bLuaOpenLibs;
@@ -157,6 +174,9 @@ public:
 	void FromLuaValue(FLuaValue& LuaValue, UObject* CallContext = nullptr, lua_State* State = nullptr);
 	FLuaValue ToLuaValue(int Index, lua_State* State = nullptr);
 
+	ELuaThreadStatus GetLuaThreadStatus(FLuaValue Value);
+	int32 GetLuaThreadStackTop(FLuaValue Value);
+
 	UPROPERTY(EditAnywhere, Category = "Lua")
 	bool bLogError;
 
@@ -175,6 +195,11 @@ public:
 	/* Enable debug of each Lua return. The LuaReturnHook event will be triggered */
 	UPROPERTY(EditAnywhere, Category = "Lua")
 	bool bEnableReturnHook;
+
+	UPROPERTY()
+	TArray<ULuaBlueprintPackage*> LuaBlueprintPackages;
+
+	TArray<TSharedRef<FLuaSmartReference>> LuaSmartReferences;
 
 	int32 GetTop();
 
@@ -217,6 +242,7 @@ public:
 	void PushNil();
 
 	void Unref(int Ref);
+	void UnrefChecked(int Ref);
 	int NewRef();
 	void GetRef(int Ref);
 	int Next(int Index);
@@ -242,17 +268,13 @@ public:
 	bool RunCodeAsset(ULuaCode* CodeAsset, int NRet = 0);
 
 	FLuaValue CreateLuaTable();
+	FLuaValue CreateLuaThread(FLuaValue Value);
 
 	bool RunFile(FString Filename, bool bIgnoreNonExistent, int NRet = 0);
 
-	static int MetaTableFunctionLuaComponent__index(lua_State *L);
-	static int MetaTableFunctionLuaComponent__newindex(lua_State *L);
+	static int MetaTableFunctionUserData__index(lua_State *L);
+	static int MetaTableFunctionUserData__newindex(lua_State *L);
 
-	static int MetaTableFunctionState__index(lua_State *L);
-	static int MetaTableFunctionState__newindex(lua_State *L);
-
-	static int MetaTableBlueprintFunctionLibraryState__index(lua_State *L);
-	
 	static int TableFunction_print(lua_State *L);
 	static int TableFunction_package_preload(lua_State *L);
 
@@ -293,6 +315,13 @@ public:
 	void SetUserDataMetaTable(FLuaValue MetaTable);
 
 	FORCEINLINE lua_State* GetInternalLuaState() const { return L; }
+
+	void PushRegistryTable();
+
+	TSharedRef<FLuaSmartReference> AddLuaSmartReference(FLuaValue Value);
+	void RemoveLuaSmartReference(TSharedRef<FLuaSmartReference> Ref);
+
+	void SetupUserDataMetatable(UObject* Context, TMap<FString, FLuaValue>& Metatable);
 
 protected:
 	lua_State* L;

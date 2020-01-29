@@ -1,4 +1,4 @@
-// Copyright 2019 - Roberto De Ioris
+// Copyright 2018-2020 - Roberto De Ioris
 
 using UnrealBuildTool;
 
@@ -7,7 +7,6 @@ public class LuaMachine : ModuleRules
     public LuaMachine(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-        bFasterWithoutUnity = true;
 
         PublicIncludePaths.AddRange(
             new string[] {
@@ -41,7 +40,8 @@ public class LuaMachine : ModuleRules
                 "SlateCore",
                 "UMG",
                 "InputCore",
-                "HTTP"
+                "HTTP",
+                "Json"
 				// ... add private dependencies that you statically link with here ...	
 			}
             );
@@ -66,32 +66,33 @@ public class LuaMachine : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_win64.lib"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "x64", "liblua53_win64.lib"));
         }
 
         if (Target.Platform == UnrealTargetPlatform.Mac)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_mac.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "x64", "liblua53_mac.a"));
         }
 
         if (Target.Platform == UnrealTargetPlatform.Linux)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_linux64.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "x64", "liblua53_linux64.a"));
         }
 
         if (Target.Platform == UnrealTargetPlatform.LinuxAArch64)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_linux_aarch64.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "ARM64", "liblua53_linux_aarch64.a"));
         }
 
         if (Target.Platform == UnrealTargetPlatform.Android)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_android.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "ARMv7", "liblua53_android.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "ARM64", "liblua53_android64.a"));
         }
 
         if (Target.Platform == UnrealTargetPlatform.IOS)
         {
-            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "lua53_ios.a"));
+            PublicAdditionalLibraries.Add(System.IO.Path.Combine(ThirdPartyDirectory, "ARM64", "liblua53_ios.a"));
         }
 
     }

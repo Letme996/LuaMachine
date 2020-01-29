@@ -1,10 +1,11 @@
-// Copyright 2019 - Roberto De Ioris
+// Copyright 2018-2020 - Roberto De Ioris
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "ThirdParty/lua/lua.hpp"
+#include "Serialization/JsonSerializer.h"
 #include "LuaValue.generated.h"
 
 // required for Mac
@@ -58,6 +59,33 @@ struct LUAMACHINE_API FLuaValue
 		String = InString;
 	}
 
+	FLuaValue(const char* InChars) : FLuaValue(FString(InChars))
+	{
+	}
+
+	FLuaValue(const TCHAR* InChars) : FLuaValue(FString(InChars))
+	{
+	}
+
+	FLuaValue(const char* InChars, size_t Length) : FLuaValue()
+	{
+		Type = ELuaValueType::String;
+		for (size_t i = 0; i < Length; i++)
+		{
+			uint16 TChar = (uint16)InChars[i];
+			// cleanup garbage
+			TChar &= 0xFF;
+			// hack for allowing binary data
+			if (TChar == 0)
+				TChar = 0xffff;
+			String += (TCHAR)TChar;
+		}
+	}
+
+	FLuaValue(TArray<uint8> InBytes) : FLuaValue((const char*)InBytes.GetData(), InBytes.Num())
+	{
+	}
+
 	FLuaValue(float Value) : FLuaValue()
 	{
 		Type = ELuaValueType::Number;
@@ -101,6 +129,8 @@ struct LUAMACHINE_API FLuaValue
 	float ToFloat();
 	bool ToBool();
 
+	TArray<uint8> ToBytes();
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Lua")
 	ELuaValueType Type;
 
@@ -132,4 +162,14 @@ struct LUAMACHINE_API FLuaValue
 
 	FLuaValue GetFieldByIndex(int32 Index);
 	FLuaValue SetFieldByIndex(int32 Index, FLuaValue Value);
+
+	bool IsReferencedInLuaRegistry() const;
+
+	static FLuaValue FromJsonValue(ULuaState* L, FJsonValue& JsonValue);
+	TSharedPtr<FJsonValue> ToJsonValue();
+
+	static FLuaValue FromBase64(FString Base64);
+	FString ToBase64();
+
+	void Unref();
 };

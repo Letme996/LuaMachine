@@ -1,4 +1,4 @@
-// Copyright 2019 - Roberto De Ioris
+// Copyright 2018-2020 - Roberto De Ioris
 
 #pragma once
 
@@ -17,7 +17,8 @@
  */
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(FLuaHttpSuccess, FLuaValue, ReturnValue, bool, bWasSuccessful, int32, StatusCode);
-
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FLuaHttpResponseReceived, FLuaValue, Context, FLuaValue, Response);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FLuaHttpError, FLuaValue, Context);
 
 UCLASS()
 class LUAMACHINE_API ULuaBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
@@ -42,6 +43,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category="Lua")
 	static FLuaValue LuaCreateTable(UObject* WorldContextObject, TSubclassOf<ULuaState> State);
+
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "Lua")
+	static FLuaValue LuaCreateThread(UObject* WorldContextObject, TSubclassOf<ULuaState> State, FLuaValue Value /* Function */);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Lua")
 	static FLuaValue LuaCreateObject(UObject* InObject);
@@ -132,6 +136,30 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "Args"), Category="Lua")
 	static FLuaValue LuaTableIndexCall(FLuaValue InTable, int32 Index, TArray<FLuaValue> Args);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static TArray<FLuaValue> LuaTableUnpack(FLuaValue InTable);
+
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "Lua")
+	static FLuaValue LuaTablePack(UObject* WorldContextObject, TSubclassOf<ULuaState> State, TArray<FLuaValue> Values);
+
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "Lua")
+	static FLuaValue LuaTableMergePack(UObject* WorldContextObject, TSubclassOf<ULuaState> State, TArray<FLuaValue> Values1, TArray<FLuaValue> Values2);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static TArray<FLuaValue> LuaTableMergeUnpack(FLuaValue InTable1, FLuaValue InTable2);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static void LuaTableFillObject(FLuaValue InTable, UObject* InObject);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static TArray<FLuaValue> LuaTableRange(FLuaValue InTable, int32 First, int32 Last);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static TArray<FLuaValue> LuaValueArrayMerge(TArray<FLuaValue> Array1, TArray<FLuaValue> Array2);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static TArray<FLuaValue> LuaValueArrayAppend(TArray<FLuaValue> Array, FLuaValue Value);
+
 	/* Calls a lua value with multiple return values (must be callable) */
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "Args"), Category="Lua")
 	static TArray<FLuaValue> LuaValueCallMulti(FLuaValue Value, TArray<FLuaValue> Args);
@@ -140,8 +168,38 @@ public:
 	UFUNCTION(BlueprintCallable, meta = (AutoCreateRefTerm = "Args"), Category = "Lua")
 	static TArray<FLuaValue> LuaValueResumeMulti(FLuaValue Value, TArray<FLuaValue> Args);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static ELuaThreadStatus LuaThreadGetStatus(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static int32 LuaThreadGetStackTop(FLuaValue Value);
+
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Lua")
 	static int32 LuaValueLength(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static bool LuaValueIsReferencedInLuaRegistry(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static UClass* LuaValueToBlueprintGeneratedClass(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static UObject* LuaValueLoadObject(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static UClass* LuaValueLoadClass(FLuaValue Value, bool bDetectBlueprintGeneratedClass);
+
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "Lua")
+	static bool LuaValueFromJson(UObject* WorldContextObject, TSubclassOf<ULuaState> State, FString Json, FLuaValue& Value);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static FString LuaValueToJson(FLuaValue Value);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static FLuaValue LuaValueFromBase64(FString Base64);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Lua")
+	static FString LuaValueToBase64(FLuaValue Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (WorldContext = "WorldContextObject"), Category="Lua")
 	static int32 LuaGetTop(UObject* WorldContextObject, TSubclassOf<ULuaState> State);
@@ -164,6 +222,13 @@ public:
 	/* Make an HTTP GET request to the specified URL to download the Lua script to run */
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", AutoCreateRefTerm = "Headers"), Category = "Lua")
 	static void LuaRunURL(UObject* WorldContextObject, TSubclassOf<ULuaState> State, FString URL, TMap<FString, FString> Headers, FString SecurityHeader, FString SignaturePublicExponent, FString SignatureModulus, FLuaHttpSuccess Completed);
+
+	/* Make an HTTP GET request to the specified URL to download the Lua script to run */
+	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject", AutoCreateRefTerm = "Headers,Error,ResponseReceived"), Category = "Lua")
+	static void LuaHttpRequest(UObject* WorldContextObject, TSubclassOf<ULuaState> State, FString Method, FString URL, TMap<FString, FString> Headers, FLuaValue Body, FLuaValue Context, const FLuaHttpResponseReceived& ResponseReceived, const FLuaHttpError& Error);
+
+	UFUNCTION(BlueprintCallable, Category = "Lua")
+	static UTexture2D* LuaValueToTransientTexture(int32 Width, int32 Height, FLuaValue Value, EPixelFormat PixelFormat = EPixelFormat::PF_B8G8R8A8, bool bDetectFormat = false);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (WorldContext = "WorldContextObject"), Category="Lua")
 	static int32 LuaGetUsedMemory(UObject* WorldContextObject, TSubclassOf<ULuaState> State);
@@ -269,5 +334,5 @@ public:
 
 private:
 	static void HttpRequestDone(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, TSubclassOf<ULuaState> LuaState, TWeakObjectPtr<UWorld> World, FString SecurityHeader, FString SignaturePublicExponent, FString SignatureModulus, FLuaHttpSuccess Completed);
-	
+	static void HttpGenericRequestDone(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful, TWeakPtr<FLuaSmartReference> Context, FLuaHttpResponseReceived ResponseReceived, FLuaHttpError Error);
 };

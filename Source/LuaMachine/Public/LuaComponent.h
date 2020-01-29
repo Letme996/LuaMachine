@@ -1,4 +1,4 @@
-// Copyright 2019 - Roberto De Ioris
+// Copyright 2018-2020 - Roberto De Ioris
 
 #pragma once
 
@@ -80,8 +80,5 @@ public:
 	void LuaSetField(FString Name, FLuaValue Value);
 
 	UPROPERTY(BlueprintAssignable, Category = "Lua", meta = (DisplayName = "On Lua Error"))
-	FLuaComponentError OnLuaError;
-
-	void SetupMetatable(lua_State* State);
-	
+	FLuaComponentError OnLuaError;	
 };
